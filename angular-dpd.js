@@ -119,9 +119,9 @@
         dpd[collection].save = function (obj, options) {
           options = angular.extend({ withCredentials: true }, options);
           if (typeof obj.id == 'string') {
-            dpd[collection].put(obj.id, obj, options);
+            return dpd[collection].put(obj.id, obj, options);
           } else {
-            dpd[collection].post(obj, options);
+            return dpd[collection].post(obj, options);
           }
         };
         
