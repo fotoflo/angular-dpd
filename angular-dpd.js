@@ -42,6 +42,8 @@
     }])
     .factory('dpd', ['$http', '$rootScope', 'dpdConfig', 'dpdSocket', function ($http, $rootScope, dpdConfig, dpdSocket) {
       var dpd = {};
+      var sessionId = null;
+
       dpd.errors = [];
       dpd.socket = dpdSocket;
       if (angular.isArray(dpdConfig)) {
@@ -77,11 +79,21 @@
         return false;
       };
       
+      var prepareOptions = function (options) {
+        options = options || {};
+        if (dpdConfig.useBearerAuth) {
+          options.headers = { "Authorization": "Bearer" + (sessionId ? " " + sessionId : "") };
+        } else {
+          options = angular.extend({ withCredentials: true }, options);
+        }
+        return options;
+      }
+      
       dpdConfig.collections.forEach(function (collection) {
         dpd[collection] = {};
 
         dpd[collection].get = function (query, options) {
-          options = angular.extend({ withCredentials: true }, options);
+          options = prepareOptions(options);
           if (typeof query == "string") {
             return $http.get(serverRoot + '/' + collection + '/' + query, options).error(ef);
           } else {
@@ -92,32 +104,30 @@
                 var query = encodeURI(JSON.stringify(query));
                 return $http.get(serverRoot + '/' + collection + '?' + query, options).error(ef);
               } else {
-                return $http.get(serverRoot + '/' + collection, {
-                  params: query,
-                  withCredentials: true
-                }).error(ef);
+                options.params = query;
+                return $http.get(serverRoot + '/' + collection, options).error(ef);
               }
             }
           }
         };
         
         dpd[collection].put = function (id, data, options) {
-          options = angular.extend({ withCredentials: true }, options);
+          options = prepareOptions(options);
           return $http.put(serverRoot + '/' + collection + '/' + id, data, options).error(ef);
         };
         
         dpd[collection].post = function (data, options) {
-          options = angular.extend({ withCredentials: true }, options);
+          options = prepareOptions(options);
           return $http.post(serverRoot + '/' + collection + '/', data, options).error(ef);
         };
         
         dpd[collection].del = function (id, options) {
-          options = angular.extend({ withCredentials: true }, options);
+          options = prepareOptions(options);
           return $http.delete(serverRoot + '/' + collection + '/' + id, options).error(ef);
         };
         
         dpd[collection].save = function (obj, options) {
-          options = angular.extend({ withCredentials: true }, options);
+          options = prepareOptions(options);
           if (typeof obj.id == 'string') {
             return dpd[collection].put(obj.id, obj, options);
           } else {
@@ -128,10 +138,9 @@
         dpd[collection].exec = function (funcName, data, options) {
           var options = angular.extend({
             method: "POST",
-            url: serverRoot + '/' + collection + '/' + funcName,
-            withCredentials: true,
+            url: serverRoot + '/' + collection + '/' + funcName
           }, options);
-
+          options = prepareOptions(options);
           if (/(POST|PUT)/i.test(options.method)) {
             options.data = data;
           } else {
@@ -164,6 +173,10 @@
         });
       };
       
+      dpd.setSession = function (session) {
+        if (!dpdConfig.useBearerAuth) throw new Error("dpdConfig.useBearerAuth must be true");
+        sessionId = session.id;
+      };
       return dpd;
     }]);
 })();
