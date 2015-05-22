@@ -1,8 +1,8 @@
 (function () {
   "use strict";
-  
+
   var angularDpdSockets = [];
-  
+
   angular.module('dpd', []).value('dpdConfig', [])
     .factory('dpdSocket', ['$rootScope', 'dpdConfig', function ($rootScope, dpdConfig) {
       if (!dpdConfig.useSocketIo) {
@@ -32,7 +32,7 @@
               }
             });
           });
-        }, 
+        },
         removeListener: function (eventName, f) {
           socket.removeListener(eventName, listeners[f]);
           delete listeners[f];
@@ -42,7 +42,7 @@
     }])
     .factory('dpd', ['$http', '$rootScope', 'dpdConfig', 'dpdSocket', function ($http, $rootScope, dpdConfig, dpdSocket) {
       var dpd = {};
-      var sessionId = null;
+      var _sessionId = null;
 
       dpd.errors = [];
       dpd.socket = dpdSocket;
@@ -51,9 +51,9 @@
           collections: dpdConfig
         };
       }
-      
+
       var serverRoot = dpdConfig.serverRoot.replace(/\/$/, "") || "";
-      
+
       if (!Array.prototype.forEach) {
         Array.prototype.forEach = function (fn, scope) {
           for (var i = 0, len = this.length; i < len; ++i) {
@@ -61,11 +61,11 @@
           }
         };
       }
-      
+
       var ef = function (data, status, headers, config) {
         dpd.errors.push(data);
       };
-      
+
       var isComplexQuery = function (obj) {
         if (obj) {
           for (var k in obj) {
@@ -78,54 +78,62 @@
         }
         return false;
       };
-      
+
       var prepareOptions = function (options) {
         options = options || {};
         if (dpdConfig.useBearerAuth) {
-          options.headers = { "Authorization": "Bearer" + (sessionId ? " " + sessionId : "") };
+          options.headers = { "Authorization": "Bearer" + (_sessionId ? " " + _sessionId : "") };
         } else {
           options = angular.extend({ withCredentials: true }, options);
         }
         return options;
       }
-      
+
+      var doGet = function(collection, query, options) {
+        options = prepareOptions(options);
+        if (typeof query == "string") {
+          return $http.get(serverRoot + '/' + collection + '/' + query, options);
+        } else {
+          if (typeof query == "undefined") {
+            return $http.get(serverRoot + '/' + collection, options);
+          } else {
+            if (isComplexQuery(query)) {
+              var query = encodeURI(JSON.stringify(query));
+              return $http.get(serverRoot + '/' + collection + '?' + query, options);
+            } else {
+              options.params = query;
+              return $http.get(serverRoot + '/' + collection, options);
+            }
+          }
+        }
+      }
+
       dpdConfig.collections.forEach(function (collection) {
         dpd[collection] = {};
 
         dpd[collection].get = function (query, options) {
-          options = prepareOptions(options);
-          if (typeof query == "string") {
-            return $http.get(serverRoot + '/' + collection + '/' + query, options).error(ef);
-          } else {
-            if (typeof query == "undefined") {
-              return $http.get(serverRoot + '/' + collection, options).error(ef);
-            } else {
-              if (isComplexQuery(query)) {
-                var query = encodeURI(JSON.stringify(query));
-                return $http.get(serverRoot + '/' + collection + '?' + query, options).error(ef);
-              } else {
-                options.params = query;
-                return $http.get(serverRoot + '/' + collection, options).error(ef);
-              }
-            }
-          }
+          return doGet(collection, query, options).error(ef);
         };
-        
+
         dpd[collection].put = function (id, data, options) {
           options = prepareOptions(options);
           return $http.put(serverRoot + '/' + collection + '/' + id, data, options).error(ef);
         };
-        
+
         dpd[collection].post = function (data, options) {
           options = prepareOptions(options);
-          return $http.post(serverRoot + '/' + collection + '/', data, options).error(ef);
+          return $http.post(serverRoot + '/' + collection + '/', data, options)
+            .success(function(data, status, headers){
+              if (headers("X-Session-Token")) console.log(headers("X-Session-Token"));
+            })
+            .error(ef);
         };
-        
-        dpd[collection].del = function (id, options) {
+
+        dpd[collection].del = dpd[collection].delete = function (id, options) {
           options = prepareOptions(options);
           return $http.delete(serverRoot + '/' + collection + '/' + id, options).error(ef);
         };
-        
+
         dpd[collection].save = function (obj, options) {
           options = prepareOptions(options);
           if (typeof obj.id == 'string') {
@@ -134,7 +142,7 @@
             return dpd[collection].post(obj, options);
           }
         };
-        
+
         dpd[collection].exec = function (funcName, data, options) {
           var options = angular.extend({
             method: "POST",
@@ -146,10 +154,15 @@
           } else {
             options.params = data;
           }
-          
-          return $http(options).error(ef);
+
+          return $http(options)
+            .success(function(data, status, headers){
+              var sessionToken = headers("X-Session-Token");
+              if (sessionToken) dpd.setSessionId(sessionToken);
+            })
+            .error(ef);
         };
-        
+
         dpd[collection].on = function (scope, event, f) {
           if (!dpdSocket) return;
           if (typeof scope !== 'object' || !scope.$on) {
@@ -161,7 +174,7 @@
           });
         };
       });
-      
+
       dpd.on = function (scope, event, f) {
         if (!dpdSocket) return;
         if (typeof scope !== 'object' || !scope.$on) {
@@ -172,10 +185,13 @@
           dpdSocket.removeListener(event, f);
         });
       };
-      
-      dpd.setSession = function (session) {
+
+      dpd.setSessionId = function (sessionId) {
         if (!dpdConfig.useBearerAuth) throw new Error("dpdConfig.useBearerAuth must be true");
-        sessionId = session.id;
+        if (sessionId && _sessionId !== sessionId) {
+          if (dpdSocket) dpdSocket.emit("server:setSession", { sid: sessionId });
+          _sessionId = sessionId;
+        }
       };
       return dpd;
     }]);
