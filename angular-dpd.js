@@ -186,13 +186,18 @@
         });
       };
 
-      dpd.setSessionId = function (sessionId) {
+      dpd.setSessionId = function (sessionId, force) {
         if (!dpdConfig.useBearerAuth) throw new Error("dpdConfig.useBearerAuth must be true");
-        if (sessionId && _sessionId !== sessionId) {
+        if (force || sessionId && _sessionId !== sessionId) {
           if (dpdSocket) dpdSocket.emit("server:setSession", { sid: sessionId });
           _sessionId = sessionId;
         }
       };
+
+      if (dpdSocket && dpdSocket.on) dpdSocket.on("reconnect", function(){
+        if (_sessionId) dpd.setSessionId(_sessionId, true);
+      });
+
       return dpd;
     }]);
 })();
