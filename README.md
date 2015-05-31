@@ -18,7 +18,9 @@ app.value('dpdConfig', {
 	collections: ['categories'], 
 	serverRoot: 'http://someotherserver.com/', // optional, defaults to same server
 	socketOptions: { reconnectionDelayMax: 3000 }, // optional socket io additional configuration
-	useSocketIo: true // optional, defaults to false
+	useSocketIo: true // optional, defaults to false,
+        useBearerAuth: true // optional, sets whether to use HTTP request header auth instead of cookies, defaults to false
+
 });
 
 
