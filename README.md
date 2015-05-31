@@ -15,36 +15,36 @@ var app = angular.module('myApp',['dpd']);
 app.value('dpdConfig',['categories']);
 // or
 app.value('dpdConfig', { 
-	collections: ['categories'], 
-	serverRoot: 'http://someotherserver.com/', // optional, defaults to same server
-	socketOptions: { reconnectionDelayMax: 3000 }, // optional socket io additional configuration
-	useSocketIo: true // optional, defaults to false,
-        useBearerAuth: true // optional, sets whether to use HTTP request header auth instead of cookies, defaults to false
+  collections: ['categories'], 
+  serverRoot: 'http://someotherserver.com/', // optional, defaults to same server
+  socketOptions: { reconnectionDelayMax: 3000 }, // optional socket io additional configuration
+  useSocketIo: true // optional, defaults to false,
+  useBearerAuth: true // optional, sets whether to use HTTP request header auth instead of cookies, defaults to false
 
 });
 
 
 app.controller('bodyController',function($scope, dpd){
 
-	dpd.categories.get().then(function(data) { }).catch(function(error) { });
+  dpd.categories.get().then(function(data) { }).catch(function(error) { });
 	
-	dpd.categories.get('414b9c5cc315485d').then(function(data) { }).catch(function(error) { });
+  dpd.categories.get('414b9c5cc315485d').then(function(data) { }).catch(function(error) { });
 	
-	// Example with an [advanced query](http://docs.deployd.com/docs/collections/reference/querying-collections.md#s-Advanced%20Queries-2035):
-	dpd.categories.get($sort: {name: 1}, $limit: 10, rightsLevel: {$gt:0}}.then(function(data) { });
+  // Example with an [advanced query](http://docs.deployd.com/docs/collections/reference/querying-collections.md#s-Advanced%20Queries-2035):
+  dpd.categories.get($sort: {name: 1}, $limit: 10, rightsLevel: {$gt:0}}.then(function(data) { });
 	
-	// Promises are supported:
-	dpd.categories.post({"value":"cat1","typeId":"987ad2e6d2bdaa9d"})
-		.success(function (result) {
-			// use result
-		})
-		.error(function (err) {
-			// on error
-		});
+  // Promises are supported:
+  dpd.categories.post({"value":"cat1","typeId":"987ad2e6d2bdaa9d"})
+  .success(function (result) {
+    // use result
+  })
+  .error(function (err) {
+    // on error
+  });
 	
-	dpd.categories.put('414b9c5cc315485d',{"value":"cat123"}).success(function(category){ }).error(function(error) { });
+  dpd.categories.put('414b9c5cc315485d',{"value":"cat123"}).success(function(category){ }).error(function(error) { });
 	
-	dpd.categories.del('414b9c5cc315485d').success(function(category){ });
+  dpd.categories.del('414b9c5cc315485d').success(function(category){ });
   
   // login a user
   dpd.users.exec('login', { username: 'user', password: 'pass' }).success(function(session) { }).error(function(err) { });
