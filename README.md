@@ -144,7 +144,7 @@ use ```dpd.users.get('me')``` - this seems to work as long as your sid cookie is
 use:
 ```
 function login(user){
-    $http.post( dpdConfig.serverRoot + 'users/login', { username: user.username, password: user.password})
+   dpd.users.exec('login', { username: user.username, password: user.password})
       .then(
       function(session, error) {
         if (error) {
