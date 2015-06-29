@@ -151,7 +151,6 @@ function login(user){
           alert(error.message);
           return false;
         } else {
-          $cookies.sid = session.data.id; // set the sid cookie
           $state.go('loginSuccess');
         }
       });
